@@ -1,6 +1,5 @@
 import streamlit as st
 from fpdf import FPDF
-import base64
 
 # 1. Page Configuration
 st.set_page_config(page_title="RetreatOS | Luxury B2B", page_icon="🌿", layout="wide")
@@ -31,7 +30,7 @@ with st.sidebar:
     resilience_check = st.checkbox("Include Resilience Badge", value=True)
     vision_statement = st.text_area("The Vision", "A 3-day immersive longevity experience.")
 
-# 3. The PDF Generation Logic (Using FPDF2)
+# 3. The PDF Generation Logic (Corrected for Streamlit)
 def create_pdf(retreat, host, lodge, vision, resilience):
     pdf = FPDF()
     pdf.add_page()
@@ -42,9 +41,9 @@ def create_pdf(retreat, host, lodge, vision, resilience):
     pdf.cell(0, 10, f"PARTNERSHIP PROPOSAL FOR {lodge.upper()}", ln=True)
     
     pdf.ln(10)
-    pdf.set_font("Helvetica", 'B', 35)
-    pdf.set_text_color(26, 26, 26) # Dark Charcoal
-    pdf.multi_cell(0, 15, retreat)
+    pdf.set_font("Helvetica", 'B', 30)
+    pdf.set_text_color(26, 26, 26) 
+    pdf.multi_cell(0, 12, retreat)
     
     pdf.ln(5)
     pdf.set_font("Helvetica", '', 14)
@@ -63,7 +62,8 @@ def create_pdf(retreat, host, lodge, vision, resilience):
         pdf.set_text_color(45, 90, 39)
         pdf.cell(0, 12, "  RESILIENCE VERIFIED: 100% SOLAR & WATER BACKUP  ", border=1, ln=True, fill=True)
 
-    return pdf.output()
+    # Convert to bytes for Streamlit download
+    return bytes(pdf.output())
 
 # 4. App Interface
 col1, col2 = st.columns([2, 1])
@@ -75,12 +75,18 @@ with col1:
 
 with col2:
     st.markdown("### 🚀 Export")
-    if st.button("Generate & Download PDF"):
-        pdf_data = create_pdf(retreat_name, host_name, target_lodge, vision_statement, resilience_check)
+    # This generates the PDF data once the button is pressed
+    if st.button("Generate Pitch File"):
+        pdf_bytes = create_pdf(retreat_name, host_name, target_lodge, vision_statement, resilience_check)
+        
+        # Now the data is in a format Streamlit understands
         st.download_button(
             label="📥 Download Luxury Pitch",
-            data=pdf_data,
-            file_name=f"{retreat_name}_Pitch.pdf",
+            data=pdf_bytes,
+            file_name=f"{retreat_name.replace(' ', '_')}_Pitch.pdf",
             mime="application/pdf"
         )
         st.success("Your pitch is ready!")
+
+st.divider()
+st.caption("RetreatOS Luxury v1.1 - No-Code Edition")
