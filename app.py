@@ -3,133 +3,156 @@ from fpdf import FPDF
 from PIL import Image
 import tempfile
 import os
+import pandas as pd
 
 # 1. Page Configuration
-st.set_page_config(page_title="RetreatOS | Lookbook Creator", page_icon="🌿", layout="wide")
+st.set_page_config(page_title="RetreatOS | Marketplace", page_icon="🌿", layout="wide")
 
-# Custom CSS for the Luxury Editor UI (Ensures the app itself looks clean)
+# Custom UI Styling for a Luxury App Experience
 st.markdown("""
     <style>
     .main { background-color: #fcfcfc; }
-    .stTextArea textarea, .stTextInput input { border-radius: 0px; border: 1px solid #d4af37; }
-    .preview-box { border: 1px solid #eee; padding: 50px; min-height: 800px; }
+    .stTabs [data-baseweb="tab-list"] { gap: 24px; border-bottom: 1px solid #eee; }
+    .stTabs [data-baseweb="tab"] { height: 50px; background-color: transparent; font-family: sans-serif; }
+    .stTabs [aria-selected="true"] { color: #D4AF37 !important; border-bottom-color: #D4AF37 !important; }
+    .partner-card { 
+        border: 1px solid #eee; 
+        padding: 25px; 
+        background: white; 
+        border-radius: 4px; 
+        margin-bottom: 20px; 
+        border-left: 5px solid #D4AF37;
+    }
+    .badge { padding: 4px 8px; border-radius: 3px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+    .badge-inf { background-color: #E3F2FD; color: #1976D2; }
+    .badge-ven { background-color: #F3E5F5; color: #7B1FA2; }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. Split-Screen Layout
-col_edit, col_prev = st.columns([1, 1], gap="large")
+# --- DATA INITIALIZATION ---
+if 'network_data' not in st.session_state:
+    st.session_state.network_data = [
+        {"Name": "Zehra Allibhai", "Type": "Influencer", "Niche": "Wellness/Fitness", "Location": "Canada", "Social": "@zehraallibhai", "Bio": "Global health educator specializing in women-only longevity retreats."},
+        {"Name": "Aquila Safari", "Type": "Venue", "Niche": "Safari Luxury", "Location": "South Africa", "Social": "@aquilasafari", "Bio": "Award-winning safari lodge with full solar and water resilience."},
+        {"Name": "Espire Global", "Type": "Company", "Niche": "Luxury Travel", "Location": "Riyadh", "Social": "@espire_global", "Bio": "Curating high-end bespoke travel experiences for international HNWIs."}
+    ]
 
-with col_edit:
-    st.title("🌿 RetreatOS Lookbook")
+# 2. Navigation Tabs
+tab_market, tab_designer, tab_join = st.tabs(["🤝 Marketplace", "✨ Lookbook Designer", "📝 Join Network"])
+
+# --- TAB 1: MARKETPLACE ---
+with tab_market:
+    st.title("Global Partnership Network")
+    col_s, col_f = st.columns([2, 1])
+    with col_s:
+        search = st.text_input("🔍 Search partners...", placeholder="Try 'Safari' or 'Wellness'")
+    with col_f:
+        roles = st.multiselect("Roles", ["Influencer", "Venue", "Company"], default=["Influencer", "Venue", "Company"])
+
+    st.divider()
     
-    with st.expander("🎨 Aesthetic & Theme", expanded=True):
-        bg_style = st.selectbox("Background Theme", ["Midnight Slate", "Luxury Cream", "Pure White"])
+    for p in st.session_state.network_data:
+        if (search.lower() in p['Name'].lower() or search.lower() in p['Niche'].lower()) and p['Type'] in roles:
+            b_class = "badge-inf" if p['Type'] == "Influencer" else "badge-ven"
+            st.markdown(f"""
+            <div class="partner-card">
+                <span class="badge {b_class}">{p['Type']}</span>
+                <h3 style="margin: 10px 0 5px 0;">{p['Name']}</h3>
+                <p style="color: #666; font-size: 14px;">📍 {p['Location']} | 🏷️ {p['Niche']}</p>
+                <p style="font-size: 15px;">{p['Bio']}</p>
+                <p style="color: #D4AF37; font-weight: bold;">{p['Social']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button(f"Propose Collaboration to {p['Name']}", key=p['Name']):
+                st.success(f"Connection request sent to {p['Name']}!")
+
+# --- TAB 2: LOOKBOOK DESIGNER ---
+with tab_designer:
+    col_edit, col_prev = st.columns([1, 1], gap="large")
+    
+    with col_edit:
+        st.subheader("Design Your Pitch")
+        bg_style = st.selectbox("Document Theme", ["Midnight Slate", "Luxury Cream", "Pure White"])
         accent_color = st.color_picker("Accent Color", "#D4AF37")
-        gallery_images = st.file_uploader("Upload Experience Gallery (Multiple)", type=["jpg", "png"], accept_multiple_files=True)
-    
-    with st.expander("📖 Partnership Details", expanded=True):
+        gallery = st.file_uploader("Upload Experience Gallery", type=["jpg", "png"], accept_multiple_files=True)
+        
         retreat_name = st.text_input("Retreat Name", "The Winelands Reset")
-        target_lodge = st.text_input("Target Venue", "Aquila Private Game Reserve")
-        host_name = st.text_input("Curator/Agency", "Junaid Gany Luxury")
-        vision = st.text_area("The Vision", "A 3-day immersive longevity experience focusing on restoration.")
-        instagram = st.text_input("Instagram Handle", "@yourbrand")
-        website = st.text_input("Website URL", "www.yourbrand.com")
-    
-    resilience_check = st.checkbox("Include Resilience Badge", value=True)
+        target_venue = st.text_input("Target Venue", "Aquila Private Game Reserve")
+        vision = st.text_area("Vision Statement", "A 3-day immersive longevity experience.")
+        social_link = st.text_input("Social/Web Link", "www.espireglobal.com")
+        resilience = st.checkbox("Include Resilience Badge", value=True)
 
-# Map background and text colors based on theme
-bg_map = {"Pure White": "#FFFFFF", "Luxury Cream": "#F9F6F0", "Midnight Slate": "#1A1A1A"}
-text_map = {"Pure White": "#1A1A1A", "Luxury Cream": "#2D2926", "Midnight Slate": "#FFFFFF"}
-current_bg = bg_map[bg_style]
-current_text = text_map[bg_style]
-
-with col_prev:
-    st.title("📝 Lookbook Preview")
-    
-    # ---------------------------------------------------------
-    # CRITICAL: THIS HTML BLOCK MUST BE RENDERED WITH THE FLAG
-    # ---------------------------------------------------------
-    html_preview = f"""
-    <div style='background-color: {current_bg}; color: {current_text}; padding: 50px; border: 1px solid #eee; min-height: 800px; font-family: serif;'>
-        <div style='border-top: 15px solid {accent_color}; margin: -50px -50px 30px -50px;'></div>
-        <p style='letter-spacing: 5px; opacity: 0.6; font-size: 10px; font-family: sans-serif;'>B2B PARTNERSHIP PROPOSAL</p>
-        <h1 style='font-size: 52px; margin: 0; line-height: 0.9;'>{retreat_name.upper()}</h1>
-        <p style='font-size: 18px; font-style: italic; color: {accent_color}; margin-top: 10px;'>At {target_lodge}</p>
+    with col_prev:
+        st.subheader("Live Lookbook Preview")
+        bg_map = {"Pure White": "#FFFFFF", "Luxury Cream": "#F9F6F0", "Midnight Slate": "#1A1A1A"}
+        txt_map = {"Pure White": "#1A1A1A", "Luxury Cream": "#2D2926", "Midnight Slate": "#FFFFFF"}
         
-        <div style='margin: 30px 0; border-bottom: 1px solid {accent_color}; opacity: 0.3;'></div>
-        
-        <h4 style='color: {accent_color}; font-family: sans-serif;'>EXECUTIVE VISION</h4>
-        <p style='font-size: 15px; font-weight: 300; line-height: 1.6; font-family: sans-serif;'>{vision}</p>
-        
-        <div style='display: flex; gap: 10px; margin-top: 25px;'>
-            {f"<div style='width: 80px; height: 80px; background: #333; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #666;'>IMAGE 1</div>" if gallery_images else ""}
-            {f"<div style='width: 80px; height: 80px; background: #333; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #666;'>IMAGE 2</div>" if len(gallery_images) > 1 else ""}
+        html_preview = f"""
+        <div style='background-color: {bg_map[bg_style]}; color: {txt_map[bg_style]}; padding: 40px; border: 1px solid #eee; min-height: 600px; font-family: serif;'>
+            <div style='border-top: 10px solid {accent_color}; margin: -40px -40px 20px -40px;'></div>
+            <p style='letter-spacing: 3px; opacity: 0.6; font-size: 10px; font-family: sans-serif;'>B2B PROPOSAL</p>
+            <h1 style='font-size: 42px; margin: 0;'>{retreat_name.upper()}</h1>
+            <p style='color: {accent_color}; font-style: italic;'>At {target_venue}</p>
+            <hr style='opacity: 0.2; margin: 20px 0;'>
+            <h5 style='color: {accent_color}; font-family: sans-serif;'>VISION</h5>
+            <p style='font-family: sans-serif; font-size: 14px;'>{vision}</p>
+            <div style='margin-top: 30px; padding: 15px; border: 1px solid {accent_color}; font-family: sans-serif; font-size: 12px;'>
+                {social_link}
+            </div>
         </div>
+        """
+        st.markdown(html_preview, unsafe_allow_html=True)
         
-        <div style='margin-top: 40px; padding: 20px; border: 1px solid {accent_color}; font-family: sans-serif;'>
-            <p style='margin: 0; font-size: 10px; font-weight: bold; color: {accent_color};'>SOCIAL & CONNECT</p>
-            <p style='margin: 0; font-size: 14px;'>{instagram} | {website}</p>
-        </div>
-        
-        {f"<div style='margin-top: 20px; background: #2d5a27; color: white; padding: 10px; text-align: center; font-size: 11px; font-family: sans-serif;'>RESILIENCE VERIFIED</div>" if resilience_check else ""}
-    </div>
-    """
-    
-    # This is the command that prevents the "Raw HTML" error
-    st.markdown(html_preview, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # 3. PDF Export Logic
-    if st.button("✨ Export High-End PDF", use_container_width=True):
-        pdf = FPDF()
-        pdf.add_page()
-        
-        # Theme Colors
-        r_bg, g_bg, b_bg = int(current_bg[1:3], 16), int(current_bg[3:5], 16), int(current_bg[5:7], 16)
-        r_acc, g_acc, b_acc = int(accent_color[1:3], 16), int(accent_color[3:5], 16), int(accent_color[5:7], 16)
-        r_txt, g_txt, b_txt = int(current_text[1:3], 16), int(current_text[3:5], 16), int(current_text[5:7], 16)
+        if st.button("✨ Export Lookbook PDF", use_container_width=True):
+            pdf = FPDF()
+            pdf.add_page()
+            # PDF Logic (Colors)
+            r_b, g_b, b_b = int(bg_map[bg_style][1:3], 16), int(bg_map[bg_style][3:5], 16), int(bg_map[bg_style][5:7], 16)
+            r_a, g_a, b_a = int(accent_color[1:3], 16), int(accent_color[3:5], 16), int(accent_color[5:7], 16)
+            r_t, g_t, b_t = int(txt_map[bg_style][1:3], 16), int(txt_map[bg_style][3:5], 16), int(txt_map[bg_style][5:7], 16)
+            
+            pdf.set_fill_color(r_b, g_b, b_b)
+            pdf.rect(0, 0, 210, 297, 'F')
+            pdf.set_fill_color(r_a, g_a, b_a)
+            pdf.rect(0, 0, 210, 10, 'F')
+            
+            pdf.set_text_color(r_t, g_t, b_t)
+            pdf.set_y(25)
+            pdf.set_font("Helvetica", 'B', 32)
+            pdf.multi_cell(0, 15, retreat_name.upper())
+            
+            # PDF Gallery
+            if gallery:
+                y_img = pdf.get_y() + 10
+                for i, img in enumerate(gallery[:3]):
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+                        Image.open(img).convert("RGB").save(tmp.name)
+                        pdf.image(tmp.name, x=10 + (i*65), y=y_img, w=60)
+                        os.unlink(tmp.name)
+                pdf.set_y(y_img + 50)
 
-        # Set Full Background
-        pdf.set_fill_color(r_bg, g_bg, b_bg)
-        pdf.rect(0, 0, 210, 297, 'F')
-        
-        # Header Accent
-        pdf.set_fill_color(r_acc, g_acc, b_acc)
-        pdf.rect(0, 0, 210, 10, 'F')
-        
-        # Text
-        pdf.set_text_color(r_txt, g_txt, b_txt)
-        pdf.set_y(25)
-        pdf.set_font("Helvetica", 'B', 36)
-        pdf.multi_cell(0, 15, retreat_name.upper())
-        
-        # Images Grid (PDF Version)
-        if gallery_images:
-            y_pos = pdf.get_y() + 5
-            for i, img_file in enumerate(gallery_images[:3]): 
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-                    img = Image.open(img_file).convert("RGB")
-                    img.save(tmp.name)
-                    pdf.image(tmp.name, x=10 + (i*65), y=y_pos, w=60)
-                    os.unlink(tmp.name)
-            pdf.set_y(y_pos + 50)
+            pdf.ln(10)
+            pdf.set_font("Helvetica", 'B', 12)
+            pdf.cell(0, 10, "EXECUTIVE VISION", ln=True)
+            pdf.set_font("Helvetica", '', 11)
+            pdf.multi_cell(0, 7, vision)
+            
+            st.download_button("📥 Download PDF", data=bytes(pdf.output()), file_name="Proposal.pdf", use_container_width=True)
 
-        pdf.ln(10)
-        pdf.set_font("Helvetica", 'B', 12)
-        pdf.cell(0, 10, "EXECUTIVE VISION", ln=True)
-        pdf.set_font("Helvetica", '', 11)
-        pdf.multi_cell(0, 7, vision)
-        
-        # Footer
-        pdf.set_y(-40)
-        pdf.set_draw_color(r_acc, g_acc, b_acc)
-        pdf.rect(10, pdf.get_y(), 190, 20)
-        pdf.set_y(pdf.get_y() + 5)
-        pdf.set_font("Helvetica", 'B', 10)
-        pdf.cell(0, 5, f"INSTAGRAM: {instagram}  |  WEB: {website}", align='C', ln=True)
-
-        st.download_button("📥 Download Final Lookbook", data=bytes(pdf.output()), file_name=f"{retreat_name}_Proposal.pdf", mime="application/pdf", use_container_width=True)
+# --- TAB 3: JOIN NETWORK ---
+with tab_join:
+    st.title("Join the Network")
+    st.write("Create your profile to be found by global luxury partners.")
+    with st.form("reg_form"):
+        n_name = st.text_input("Business/Public Name")
+        n_type = st.selectbox("Role", ["Influencer", "Venue", "Company"])
+        n_niche = st.text_input("Niche")
+        n_loc = st.text_input("Location")
+        n_social = st.text_input("Social Handle")
+        n_bio = st.text_area("Professional Bio")
+        if st.form_submit_button("Create Profile"):
+            st.session_state.network_data.append({"Name": n_name, "Type": n_type, "Niche": n_niche, "Location": n_loc, "Social": n_social, "Bio": n_bio})
+            st.success("Profile live in Marketplace!")
 
 st.divider()
-st.caption("RetreatOS v1.7.2 | Luxury B2B Edition")
+st.caption("RetreatOS v2.1")
