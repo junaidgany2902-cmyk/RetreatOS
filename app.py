@@ -9,84 +9,94 @@ with st.sidebar:
     st.title("🌿 RetreatOS")
     st.info("Build high-end B2B pitches in seconds.")
     
-    # --- PAYMENT SECTION ---
-    st.subheader("💳 Unlock Premium Export")
-    merchant_id = "10000100" 
-    payfast_html = f"""
-    <form action="https://www.payfast.co.za/eng/process" method="post" target="_blank">
-        <input type="hidden" name="merchant_id" value="{merchant_id}">
-        <input type="hidden" name="amount" value="350.00">
-        <input type="hidden" name="item_name" value="Single Luxury Pitch Export">
-        <input type="submit" value="Pay R350 to Export" style="width:100%; background:#000; color:#fff; border:none; padding:10px; cursor:pointer; font-weight:bold;">
-    </form>
-    """
-    st.components.v1.html(payfast_html, height=50)
-    st.divider()
-
     # --- INPUT FIELDS ---
+    st.header("Step 1: The Basics")
     retreat_name = st.text_input("Retreat Name", "The Winelands Reset")
     host_name = st.text_input("Host/Agency Name", "Junaid Gany Luxury")
     target_lodge = st.text_input("Target Lodge", "Aquila Private Game Reserve")
+    
+    st.header("Step 2: The Business Case")
+    vision_statement = st.text_area("The Vision", "A 3-day immersive longevity experience focusing on cellular health and restoration.")
+    target_audience = st.text_input("Target Audience", "HNWI Professionals (35-55) from Sandton & Cape Town")
+    marketing_plan = st.text_area("Marketing Reach", "Email list of 5,000 targeted clients + Instagram reach of 25k followers.")
+    
+    st.header("Step 3: Logistics")
+    schedule_summary = st.text_area("Schedule Highlights", "Day 1: Arrival & Breathwork; Day 2: Cold Plunge & Game Drive; Day 3: Integration.")
     resilience_check = st.checkbox("Include Resilience Badge", value=True)
-    vision_statement = st.text_area("The Vision", "A 3-day immersive longevity experience.")
 
-# 3. The PDF Generation Logic (Corrected for Streamlit)
-def create_pdf(retreat, host, lodge, vision, resilience):
+# 3. Expanded PDF Generation Logic
+def create_pdf(retreat, host, lodge, vision, audience, marketing, schedule, resilience):
     pdf = FPDF()
     pdf.add_page()
     
-    # Luxury Styling
-    pdf.set_font("Helvetica", 'B', 16)
-    pdf.set_text_color(212, 175, 55) # Gold color
+    # --- COVER SECTION ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.set_text_color(212, 175, 55) # Gold
     pdf.cell(0, 10, f"PARTNERSHIP PROPOSAL FOR {lodge.upper()}", ln=True)
     
     pdf.ln(10)
-    pdf.set_font("Helvetica", 'B', 30)
+    pdf.set_font("Helvetica", 'B', 32)
     pdf.set_text_color(26, 26, 26) 
-    pdf.multi_cell(0, 12, retreat)
+    pdf.multi_cell(0, 15, retreat)
     
-    pdf.ln(5)
     pdf.set_font("Helvetica", '', 14)
     pdf.cell(0, 10, f"Curated by {host}", ln=True)
-    
-    pdf.ln(20)
+    pdf.ln(15)
+
+    # --- SECTION: THE VISION ---
     pdf.set_font("Helvetica", 'B', 12)
-    pdf.cell(0, 10, "THE VISION", ln=True)
+    pdf.cell(0, 10, "1. THE VISION", ln=True)
     pdf.set_font("Helvetica", '', 11)
     pdf.multi_cell(0, 8, vision)
+    pdf.ln(5)
+
+    # --- SECTION: TARGET AUDIENCE ---
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 10, "2. AUDIENCE & MARKETING", ln=True)
+    pdf.set_font("Helvetica", '', 11)
+    pdf.multi_cell(0, 8, f"Target: {audience}\nMarketing Strategy: {marketing}")
+    pdf.ln(5)
+
+    # --- SECTION: SCHEDULE ---
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 10, "3. PRELIMINARY SCHEDULE", ln=True)
+    pdf.set_font("Helvetica", '', 11)
+    pdf.multi_cell(0, 8, schedule)
     
+    # --- RESILIENCE FOOTER ---
     if resilience:
-        pdf.ln(10)
+        pdf.ln(15)
         pdf.set_fill_color(244, 251, 244)
         pdf.set_draw_color(45, 90, 39)
         pdf.set_text_color(45, 90, 39)
-        pdf.cell(0, 12, "  RESILIENCE VERIFIED: 100% SOLAR & WATER BACKUP  ", border=1, ln=True, fill=True)
+        pdf.set_font("Helvetica", 'B', 10)
+        pdf.cell(0, 12, "  🛡 RESILIENCE VERIFIED: 100% SOLAR & WATER BACKUP COMPLIANT  ", border=1, ln=True, fill=True)
 
-    # Convert to bytes for Streamlit download
     return bytes(pdf.output())
 
 # 4. App Interface
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.markdown(f"### 📝 Preview: {retreat_name}")
-    st.markdown(f"**Lodge:** {target_lodge}")
-    st.info(vision_statement)
+    st.markdown("### 📝 Partnership Highlights")
+    st.write(f"**Host:** {host_name}")
+    st.write(f"**Demographic:** {target_audience}")
+    with st.expander("View Marketing Plan"):
+        st.write(marketing_plan)
+    with st.expander("View Schedule"):
+        st.write(schedule_summary)
 
 with col2:
-    st.markdown("### 🚀 Export")
-    # This generates the PDF data once the button is pressed
-    if st.button("Generate Pitch File"):
-        pdf_bytes = create_pdf(retreat_name, host_name, target_lodge, vision_statement, resilience_check)
-        
-        # Now the data is in a format Streamlit understands
+    st.markdown("### 🚀 Export Pitch")
+    if st.button("Generate Expanded PDF"):
+        pdf_bytes = create_pdf(retreat_name, host_name, target_lodge, vision_statement, target_audience, marketing_plan, schedule_summary, resilience_check)
         st.download_button(
             label="📥 Download Luxury Pitch",
             data=pdf_bytes,
-            file_name=f"{retreat_name.replace(' ', '_')}_Pitch.pdf",
+            file_name=f"{retreat_name.replace(' ', '_')}_Expanded.pdf",
             mime="application/pdf"
         )
-        st.success("Your pitch is ready!")
+        st.success("Expanded Pitch Ready!")
 
 st.divider()
-st.caption("RetreatOS Luxury v1.1 - No-Code Edition")
+st.caption("RetreatOS Luxury v1.2")
